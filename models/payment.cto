@@ -1,0 +1,35 @@
+namespace org.accordproject.payment
+
+import org.accordproject.contract.Contract from https://models.accordproject.org/accordproject/contract.cto
+import org.accordproject.party.Party from https://models.accordproject.org/accordproject/party.cto
+
+asset PaymentAgreement extends Contract {
+  o String contractId
+  o String description
+  o Double amount
+  o String currency
+  o DateTime dueDate
+  o String paymentTerms
+  --> Party freelancer
+  --> Party client
+}
+
+participant Freelancer extends Party {
+  o String skills
+  o String bankAccount
+}
+
+participant Client extends Party {
+  o String companyName
+  o String billingAddress
+}
+
+transaction PaymentRequest {
+  o Double amount
+  o String invoiceId
+}
+
+transaction PaymentConfirmation {
+  o String transactionId
+  o DateTime confirmedAt
+}
