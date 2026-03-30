@@ -56,3 +56,10 @@ PYTHONPATH=. pytest tests/test_agents.py -v
 ## GSoC 2026
 
 Proof-of-work prototype for Accord Project GSoC 2026 — Agentic Workflow for Drafting Templates.
+## Sample Output
+
+### Pipeline execution
+![Pipeline](docs/demo_pipeline.png)
+
+### Test results
+![Tests](docs/demo_tests.png)
