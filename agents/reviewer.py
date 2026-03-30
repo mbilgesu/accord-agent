@@ -5,51 +5,64 @@ ReviewerAgent: Reviews the validated template for legal clarity,
 completeness, and Accord Project best practices.
 """
 
-from crewai import Agent, Task
+import os
+import json
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+SYSTEM_PROMPT = """You are a senior legal engineer with deep expertise in smart contracts
+and the Accord Project ecosystem. You review templates for legal soundness,
+missing clauses, and compliance with industry standards.
+Always respond with valid JSON only.
+
+Return this structure:
+{
+  "production_ready": true/false,
+  "review_notes": ["note1", "note2"],
+  "improvements_made": ["improvement1"],
+  "final_concerto_model": "namespace...",
+  "final_templatemark": "# Title...",
+  "final_sample_data": {}
+}"""
 
 
-def create_reviewer_agent(llm_model: str = "gpt-4o") -> Agent:
-    return Agent(
-        role="Legal Template Reviewer",
-        goal=(
-            "Review validated Accord Project templates for legal clarity, "
-            "completeness, and alignment with best practices. Suggest "
-            "improvements and produce the final template package."
-        ),
-        backstory=(
-            "You are a senior legal engineer with deep expertise in smart "
-            "contracts and the Accord Project ecosystem. You review templates "
-            "for legal soundness, missing clauses, ambiguous terms, and "
-            "compliance with industry standards. Your output is always "
-            "production-ready and well-documented."
-        ),
-        verbose=True,
-        allow_delegation=False,
-        llm=llm_model,
+def review_template(draft: dict, validation: dict) -> dict:
+    """
+    ReviewerAgent: reviews validated template for legal completeness
+    and produces the final production-ready template.
+    """
+    context = f"""
+Draft template:
+{json.dumps(draft, indent=2)}
+
+Validation results:
+{json.dumps(validation, indent=2)}
+
+Review for:
+1. Legal completeness — are all essential clauses present?
+2. Clarity — are terms unambiguous?
+3. Accord Project best practices
+4. Missing fields for production use
+"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": context}
+        ],
+        temperature=0.2,
+        max_tokens=2000,
     )
 
+    content = response.choices[0].message.content.strip()
+    if content.startswith("```"):
+        content = content.split("```")[1]
+        if content.startswith("json"):
+            content = content[4:]
 
-def create_review_task(agent: Agent, validation_output: str) -> Task:
-    return Task(
-        description=f"""
-        Review the following validated Accord Project template:
-
-        {validation_output}
-
-        Your review must cover:
-        1. Legal completeness — are all essential clauses present?
-        2. Clarity — are terms unambiguous and well-defined?
-        3. Accord Project best practices — naming, structure, conventions
-        4. Missing fields — what should be added for production use?
-        5. Final verdict — is this template ready to publish?
-
-        Produce an improved final version if changes are needed.
-        """,
-        agent=agent,
-        expected_output=(
-            "A JSON object with keys: 'final_concerto_model' (string), "
-            "'final_templatemark' (string), 'final_sample_data' (dict), "
-            "'review_notes' (list of strings), 'production_ready' (bool), "
-            "'improvements_made' (list of strings)"
-        ),
-    )
+    return json.loads(content)
